@@ -1,58 +1,89 @@
 #ifndef KD_H
 #define KD_H
+/**
+ * @file KD.h
+ * @brief Implementación de KD-Tree para indexación espacial 3D
+ *
+ * Árbol k-dimensional que particiona el espacio por planos perpendiculares
+ * a los ejes, rotando cíclicamente entre dimensiones (X → Y → Z → X...).
+ * Inserción: O(log n) promedio | Búsqueda: O(log n) promedio
+ */
 #include <vector>
 using namespace std;
 
-const int k = 3;
+const int k = 3;  // Dimensionalidad del espacio
 
+/**
+ * @class Node
+ * @brief Nodo del KD-Tree conteniendo un punto k-dimensional
+ */
 class Node {
 public:
+    /// Punto k-dimensional (x, y, z)
     vector<int> point;
+    /// Subárbol izquierdo (puntos menores en el eje actual)
     Node* left;
+    /// Subárbol derecho (puntos mayores o iguales en el eje actual)
     Node* right;
 
-    // Constructor
+    /**
+     * @brief Constructor
+     * @param arr Vector de k enteros representando el punto
+     */
     Node(vector<int> arr) : point(arr), left(nullptr), right(nullptr) {}
 };
 
-// Clase para representar el KD-Tree
+/**
+ * @class KDTree
+ * @brief KD-Tree para indexación espacial 3D
+ *
+ * Implementa inserción y búsqueda en espacio tridimensional.
+ * Complejidad teórica: O(log n) promedio para ambas operaciones.
+ */
 class KDTree {
 private:
     Node* root;
 
-    // Función recursiva para insertar un nodo en el árbol
+    /**
+     * @brief Inserción recursiva
+     * @param root Nodo raíz del subárbol actual
+     * @param point Punto a insertar
+     * @param depth Profundidad actual (determina el eje de comparación)
+     * @return Nodo insertado
+     * @note Complejidad: O(log n) promedio
+     */
     Node* insertRec(Node* root, vector<int> point, unsigned depth) {
-        // Si el árbol está vacío, retorna un nuevo nodo
         if (root == nullptr)
             return new Node(point);
 
-        // Calcular el eje actual de comparación
         unsigned cd = depth % k;
 
-        // Decidir si se va al subárbol izquierdo o derecho
         if (point[cd] < root->point[cd]) {
             root->left = insertRec(root->left, point, depth + 1);
-        } else { // incluir puntos iguales en el subárbol derecho
+        } else {
             root->right = insertRec(root->right, point, depth + 1);
         }
 
         return root;
     }
 
-    // Función recursiva para buscar un punto en el KD-Tree
+    /**
+     * @brief Búsqueda recursiva
+     * @param root Nodo raíz del subárbol actual
+     * @param point Punto a buscar
+     * @param depth Profundidad actual
+     * @return true si el punto existe, false en caso contrario
+     * @note Complejidad: O(log n) promedio
+     */
     bool searchRec(Node* root, vector<int> point, unsigned depth) {
-        // Caso base: el nodo es nulo
         if (root == nullptr)
             return false;
 
-        // Si el punto es el mismo
         if (root->point == point)
             return true;
 
-        // Calcular el eje actual de comparación
         unsigned cd = depth % k;
 
-        // Decidir si buscar en el subárbol izquierdo o derecho
         if (point[cd] < root->point[cd])
             return searchRec(root->left, point, depth + 1);
         
@@ -60,15 +91,26 @@ private:
     }
 
 public:
-    // Constructor del KDTree
+    /**
+     * @brief Constructor por defecto
+     */
     KDTree() : root(nullptr) {}
 
-    // Función para insertar un punto en el KD-Tree
+    /**
+     * @brief Inserta un punto en el KD-Tree
+     * @param point Vector de k enteros representando el punto 3D
+     * @note Complejidad: O(log n) promedio
+     */
     void insert(vector<int> point) {
         root = insertRec(root, point, 0);
     }
 
-    // Función para buscar un punto en el KD-Tree
+    /**
+     * @brief Busca un punto en el KD-Tree
+     * @param point Vector de k enteros representando el punto 3D
+     * @return true si el punto existe, false en caso contrario
+     * @note Complejidad: O(log n) promedio
+     */
     bool search(vector<int> point) {
         return searchRec(root, point, 0);
     }

@@ -7,25 +7,23 @@
 #include "KD.h"
 
 using namespace std;
-// Definición de vértices del cubo
 //float scale = 1.5f;
 
-// Definir colores para los ejes
+// Definir colores para los ejes (X=Azul, Y=Rojo, Z=Verde)
 float axisColors[3][3] = {
     {0.0f, 0.0f, 1.0f},  // Azul para X
     {1.0f, 0.0f, 0.0f},  // Rojo para Y
     {0.0f, 1.0f, 0.0f}   // Verde para Z
 };
 
-// Variable para ajustar la longitud de los ejes
+// longitudes de los ejes
 float axisLength = 100.0f;
 
-// Estructura para representar un espacio 3D
 struct Space {
     float minX, maxX, minY, maxY, minZ, maxZ;
 };
 
-// Función para dibujar una línea
+// Dibujar línea
 void drawLine(float x1, float y1, float z1, float x2, float y2, float z2) {
     glBegin(GL_LINES);
     glVertex3f(x1, y1, z1);
@@ -33,7 +31,7 @@ void drawLine(float x1, float y1, float z1, float x2, float y2, float z2) {
     glVertex3f(x2, y2, z2);
 }
 
-// Función para dibujar texto en 3D
+// Renderizar texto en viewport 3D
 void drawText3D(const char* text, float x, float y, float z) {
     glRasterPos3f(x, y, z);
     for (const char* c = text; *c != '\0'; c++) {
@@ -41,17 +39,17 @@ void drawText3D(const char* text, float x, float y, float z) {
     }
 }
 
-// Función para dibujar un eje con cinta métrica
+// Eje con marcas de escala
 void drawAxis(int axis) {
     glColor3fv(axisColors[axis]);
     
-    // Dibujar el eje principal
+    // Eje principal
     drawLine(0, 0, 0, 
              axis == 0 ? axisLength : 0,
              axis == 1 ? axisLength : 0,
              axis == 2 ? axisLength : 0);
     
-    // Dibujar marcas en la cinta métrica
+    // Marcas de escala
     for (int i = 0; i <= axisLength; i += 10) {
         float markStart[3] = {0}, markEnd[3] = {0};
         markStart[axis] = i;
@@ -61,7 +59,7 @@ void drawAxis(int axis) {
         drawLine(markStart[0], markStart[1], markStart[2],
                  markEnd[0], markEnd[1], markEnd[2]);
         
-        // Dibujar números en las marcas principales
+        // Números en marcas principales
         if (i % 20 == 0) {
             char number[10];
             sprintf(number, "%d", i);
@@ -73,10 +71,9 @@ void drawAxis(int axis) {
     }
 }
 
-// Eliminar la variable de escala global, ya que ahora usaremos axisLength
 // float scale = 1.5f;
 
-// Definición de vértices del cubo (ahora unitario)
+// Vértices del cubo unitario
 float ver[8][3] = 
 {
     {0.0f, 0.0f, 1.0f},
@@ -90,15 +87,15 @@ float ver[8][3] =
 };
 
 
-// Variables de rotación del cubo
+// Rotación del cubo
 double rotate_y = 0; 
 double rotate_x = 0;
 
-// Variables para el manejo del mouse
+// Estado del mouse
 int prev_x, prev_y;
 bool mouse_dragging = false;
 
-// Estructura para campos de texto
+// Campos de texto para UI
 struct InputField {
     float x, y, width, height;
     std::string label;
@@ -110,7 +107,7 @@ struct InputField {
 
 KDTree kdTree;
 
-// Estructura para almacenar nodos del KD-Tree con información de partición
+// Nodo del KD-Tree con metadatos de partición espacial
 struct TreeNode {
     vector<float> point;
     TreeNode* left;
@@ -122,7 +119,7 @@ struct TreeNode {
 // Vector para almacenar los nodos del árbol
 vector<TreeNode*> treeNodes;
 
-// Función para insertar un nuevo nodo en el árbol
+// Inserción de punto en el KD-Tree con actualización del bounding box
 void insertNode(const vector<float>& point) {
     if (treeNodes.empty()) {
         TreeNode* root = new TreeNode{point, nullptr, nullptr, 0, {0, axisLength, 0, axisLength, 0, axisLength}};
@@ -162,7 +159,7 @@ void insertNode(const vector<float>& point) {
     }
 }
 
-// Función para dibujar un punto en el espacio 3D
+// Renderizar punto en el espacio 3D
 void drawPoint(const vector<float>& point) {
     glPointSize(5.0f);
     glBegin(GL_POINTS);
@@ -171,7 +168,7 @@ void drawPoint(const vector<float>& point) {
     glEnd();
 }
 
-// Función para renderizar texto usando GLUT
+// Renderizar texto usando GLUT
 void renderBitmapString(float x, float y, void *font, const char *string)
 {
     glRasterPos2f(x, y);
@@ -180,7 +177,7 @@ void renderBitmapString(float x, float y, void *font, const char *string)
     }
 }
 
-// Función para dibujar un plano de partición
+// Plano de partición del KD-Tree (plano YZ, XZ o XY según el nivel)
 void drawPartitionPlane(const TreeNode* node) {
     int axis = node->level % 3;
     glColor4f(axisColors[axis][0], axisColors[axis][1], axisColors[axis][2], 0.3f);  // Semi-transparente
@@ -204,7 +201,7 @@ void drawPartitionPlane(const TreeNode* node) {
     glEnd();
 }
 
-// Función para dibujar todos los planos de partición y puntos
+// Visualización de planos de partición y puntos del KD-Tree
 void drawKDTreePartitions() {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -215,7 +212,7 @@ void drawKDTreePartitions() {
     glDisable(GL_BLEND);
 }
 
-// Función para dibujar un nodo del árbol
+// Renderizar nodo del árbol con conexiones a hijos
 void drawNode(const TreeNode* node, float x, float y, float width) {
     if (node == nullptr) return;
 
@@ -258,22 +255,22 @@ void drawNode(const TreeNode* node, float x, float y, float width) {
 
 }
 
-// Función para dibujar el KD-Tree
+// Visualización jerárquica del KD-Tree
 void drawKDTree() {
     if (!treeNodes.empty()) {
         drawNode(treeNodes[0], 0.0f, 0.6f, 0.3f);
     }
 }
 
-// Vector para almacenar las coordenadas agregadas
+// Almacenamiento de coordenadas
 std::vector<std::vector<float>> coordenadas;
 
 void drawLineCube() {
     glPushMatrix();
-    glScalef(axisLength, axisLength, axisLength);  // Escalar el cubo según la longitud de los ejes
+    glScalef(axisLength, axisLength, axisLength);
     
-    // Dibujar el cubo
-    glColor3f(0.5f, 0.5f, 0.5f);  // Color gris para el cubo
+    // Wireframe del cubo unitario
+    glColor3f(0.5f, 0.5f, 0.5f);
     glBegin(GL_LINE_LOOP);
     glVertex3fv(ver[0]);
     glVertex3fv(ver[1]);
@@ -301,13 +298,13 @@ void drawLineCube() {
 
     glPopMatrix();
 
-    // Dibujar los ejes
+    // Ejes coordenados
     drawAxis(0);  // Eje X
     drawAxis(1);  // Eje Y
     drawAxis(2);  // Eje Z
 }
 
-// Inicializar campos de entrada y botón
+// Configurar UI
 void initUI() {
     // Posicionar los campos en la parte superior de la ventana
     float startX = -0.9f; // Comienza un poco más a la izquierda
@@ -346,10 +343,10 @@ void initUI() {
     button.active = false;
 }
 
-// Función para dibujar la interfaz de entrada en la mitad derecha
+// UI: panel de entrada en viewport derecho
 void drawUI()
 {
-    // Configurar proyección ortográfica para la interfaz
+    // Configurar proyección ortográfica para UI
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     glOrtho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
@@ -357,17 +354,15 @@ void drawUI()
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    // Dibujar fondo de la interfaz (opcional, aquí blanco ya está)
-    
-    // Configurar color negro para texto y rectángulos
+    // Color para texto y rectángulos
     glColor3f(0.0f, 0.0f, 0.0f);
 
-    // Dibujar campos de entrada
+    // Campos de entrada
     auto drawField = [](InputField &field) {
-        // Dibujar el label
+        // Label
         renderBitmapString(field.x, field.y + 0.05f, GLUT_BITMAP_HELVETICA_18, field.label.c_str());
 
-        // Dibujar el rectángulo del campo de texto
+        // Rectángulo del campo
         glBegin(GL_LINE_LOOP);
         glVertex2f(field.x, field.y);
         glVertex2f(field.x + field.width, field.y);
@@ -375,7 +370,7 @@ void drawUI()
         glVertex2f(field.x, field.y - field.height);
         glEnd();
 
-        // Dibujar el texto dentro del campo
+        // Texto del campo
         renderBitmapString(field.x + 0.02f, field.y - 0.08f, GLUT_BITMAP_HELVETICA_18, field.text.c_str());
     };
 
@@ -383,8 +378,7 @@ void drawUI()
     drawField(inputY);
     drawField(inputZ);
 
-    // Dibujar el botón
-    // Dibujar rectángulo del botón
+    // Botón
     glBegin(GL_LINE_LOOP);
     glVertex2f(button.x, button.y);
     glVertex2f(button.x + button.width, button.y);
@@ -392,13 +386,12 @@ void drawUI()
     glVertex2f(button.x, button.y - button.height);
     glEnd();
 
-    // Dibujar el texto del botón centrado
-    // Calcular posición del texto
+    // Texto del botón
     float textX = button.x + 0.02f;
     float textY = button.y - 0.1f;
     renderBitmapString(textX, textY, GLUT_BITMAP_HELVETICA_18, button.label.c_str());
 
-    // Opcional: Mostrar las coordenadas agregadas
+    // Coordenadas ingresadas
     float coordY = -0.5f;
     for(auto &coord : coordenadas){
         std::string coordStr = "(" + std::to_string(coord[0]) + ", " + 
@@ -409,7 +402,7 @@ void drawUI()
     }
 }
 
-// Función para dibujar la línea divisoria
+// Línea divisoria entre viewports
 void drawDividerLine()
 {
     glColor3f(0.0, 0.0, 0.0); // Color negro para la línea
@@ -419,10 +412,10 @@ void drawDividerLine()
     glEnd();
 }
 
-// Función de visualización
+// Render loop principal
 void display()
 {
-    // Limpiar la pantalla con fondo blanco
+    // Fondo blanco
     glClearColor(1, 1, 1, 1); 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -430,7 +423,7 @@ void display()
     int w = glutGet(GLUT_WINDOW_WIDTH);
     int h = glutGet(GLUT_WINDOW_HEIGHT);
 
-    // ----------- Mitad Izquierda: Cubo 3D -----------
+    // ============ Viewport izquierdo: Cubo 3D ============
     glViewport(0, 0, w / 2, h); // Mitad izquierda
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -438,22 +431,22 @@ void display()
     
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    // Ajustar la posición de la cámara para ver todo el cubo
+    // Cámara en posición isométrica
     gluLookAt(axisLength * 1.5, axisLength * 1.5, axisLength * 1.5,
               axisLength / 2, axisLength / 2, axisLength / 2,
               0, 0, 1);
 
 
-    // Rotar la escena según los valores actuales
+    // Rotación mediante mouse
     glRotatef(rotate_x, 1.0, 0.0, 0.0);
     glRotatef(rotate_y, 0.0, 1.0, 0.0);
 
-    // Dibujar el cubo con ejes
+    // Escena 3D
     drawLineCube();
     drawKDTreePartitions();
 
-    // ----------- Mitad Derecha: Interfaz de Entrada -----------
-        // Dibujar el KD-Tree en la mitad derecha
+    // ============ Viewport derecho: UI ============
+    // KD-Tree en vista 2D
     glViewport(w / 2, 0, w / 2, h);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -465,8 +458,7 @@ void display()
     drawUI();
     drawKDTree();
 
-    // ----------- Dibujar la Línea Divisoria -----------
-    // Configurar la vista para toda la pantalla para dibujar la línea divisoria
+    // ============ Línea divisoria ============
     glViewport(0, 0, w, h); // Toda la ventana
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -477,13 +469,10 @@ void display()
 
     drawDividerLine();
 
-    // Intercambiar buffers
     glutSwapBuffers();
 }
 
-// par ala modificacion de las coordenadas
-// Modificar la función para manejar la entrada de coordenadas
-// Modificar la función para manejar la entrada de coordenadas
+// Procesar coordenadas ingresadas por el usuario
 void handleCoordinateInput() {
     if (!inputX.text.empty() && !inputY.text.empty() && !inputZ.text.empty()) {
         try {
@@ -501,7 +490,7 @@ void handleCoordinateInput() {
             insertNode(point);
             cout << "Coordenadas agregadas: (" << xCoord << ", " << yCoord << ", " << zCoord << ")" << endl;
 
-            // Limpiar los campos de entrada
+            // Limpiar campos
             inputX.text.clear();
             inputY.text.clear();
             inputZ.text.clear();
@@ -515,7 +504,7 @@ void handleCoordinateInput() {
     }
 }
 
-// Función para ajustar la longitud de los ejes (puedes vincularla a una tecla o UI)
+// Ajustar escala de los ejes
 void adjustAxisLength(float delta) {
     axisLength += delta;
     if (axisLength < 10) axisLength = 10;
@@ -523,7 +512,7 @@ void adjustAxisLength(float delta) {
     glutPostRedisplay();
 }
 
-// Manejo del movimiento del mouse para rotar el cubo
+// Rotación del modelo mediante drag
 void mouseMove(int x, int y)
 {
     if (mouse_dragging)
@@ -536,32 +525,32 @@ void mouseMove(int x, int y)
     }
 }
 
-// Manejo de los botones del mouse para rotar o interactuar con la UI
+// Evento de botones del mouse (rotación + interacción UI)
 void mouseButton(int buttonType, int state, int x, int y)
 {
     if (buttonType == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
     {
-        // Obtener el tamaño de la ventana
+        // Dimensiones del viewport
         int w = glutGet(GLUT_WINDOW_WIDTH);
         int h = glutGet(GLUT_WINDOW_HEIGHT);
 
-        // Convertir las coordenadas del mouse a normalizadas (-1 a 1)
+        // Coordenadas normalizadas del mouse (-1 a 1)
         float normX = (float)x / w * 2 - 1;
         float normY = -((float)y / h * 2 - 1);
 
         if(x < w / 2){
-            // Click en la mitad izquierda: iniciar rotación
+            // Viewport izquierdo: iniciar rotación
             mouse_dragging = true;
             prev_x = x;
             prev_y = y;
         }
         else{
-            // Click en la mitad derecha: interactuar con la UI
-            // Ajustar las coordenadas para la mitad derecha
+            // Viewport derecho: interactuar con UI
+            // Ajustar coordenadas para viewport derecho
             float uiX = (float)(x - w / 2) / (w / 2) * 2 - 1;
             float uiY = (float)(h - y) / h * 2 - 1;
 
-            // Verificar si se hizo clic en algún campo de entrada
+            // Verificar clic en campos de entrada
             auto checkActive = [&](InputField &field) -> bool {
                 return (uiX >= field.x && uiX <= field.x + field.width) &&
                        (uiY <= field.y && uiY >= field.y - field.height);
@@ -580,8 +569,7 @@ void mouseButton(int buttonType, int state, int x, int y)
                 inputZ.active = true;
             }
             else{
-                // Verificar si se hizo clic en el botón
-                // Modificar la acción del botón
+                // Clic en botón: procesar entrada
                 if ((uiX >= button.x) && (uiX <= button.x + button.width) &&
                     (uiY <= button.y) && (uiY >= button.y - button.height)) {
                     if (inputX.text.empty() || inputY.text.empty() || inputZ.text.empty()) {
@@ -596,7 +584,7 @@ void mouseButton(int buttonType, int state, int x, int y)
                             kdTree.insert({static_cast<int>(xCoord), static_cast<int>(yCoord), static_cast<int>(zCoord)});
                             cout << "Coordenadas agregadas: (" << xCoord << ", " << yCoord << ", " << zCoord << ")" << endl;
 
-                            // Limpiar los campos de entrada
+                            // Limpiar campos
                             inputX.text.clear();
                             inputY.text.clear();
                             inputZ.text.clear();
@@ -616,10 +604,10 @@ void mouseButton(int buttonType, int state, int x, int y)
     }
 }
 
-// Manejo de la entrada del teclado para los campos de texto
+// Input handler para campos de texto
 void keyboard(unsigned char key, int x, int y)
 {
-    // Determinar qué campo está activo
+    // Determinar campo activo
     InputField* activeField = nullptr;
     if(inputX.active) activeField = &inputX;
     else if(inputY.active) activeField = &inputY;
@@ -653,12 +641,12 @@ void initFields(){
     initUI();
 }
 
-// Función principal
+// Entry point
 int main(int argc, char** argv)
 {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_RGBA | GLUT_DEPTH | GLUT_DOUBLE);
-    glutInitWindowSize(1000, 600); // Aumentar el ancho de la ventana
+    glutInitWindowSize(1000, 600);
     glutCreateWindow("KD-Tree Visualization");
     glutDisplayFunc(display);
     glutMotionFunc(mouseMove);

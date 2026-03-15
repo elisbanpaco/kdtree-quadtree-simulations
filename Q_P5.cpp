@@ -6,20 +6,20 @@ using namespace std;
 // Estructura of the balls
 struct Ball {
     float x, y;        // Posición
-    float vx, vy;      // Velocidad en componentes x, y
-    float radius;      // Radio
-    int id;           // Identificador único
+    float vx, vy;      // Velocidad
+    float radius;
+    int id;
     
     Ball(float _x, float _y, float _vx, float _vy, float _r, int _id) 
         : x(_x), y(_y), vx(_vx), vy(_vy), radius(_r), id(_id) {}
 
-    // Actualizar posición basada en velocidad
+    // Integración de movimiento
     void update(float deltaTime) {
         x += vx * deltaTime;
         y += vy * deltaTime;
     }
 
-    // Rebotar en los bordes
+    // Colisión con paredes
     void handleBorderCollision(int minX, int minY, int maxX, int maxY) {
         if (x - radius < minX) {
             x = minX + radius;
@@ -48,18 +48,18 @@ vector<Ball> balls;
 const float BALL_RADIUS = 2.0f;
 const int BORDER_MARGIN = 50;
 int nextBallId = 0;
-const float INITIAL_SPEED = 100.0f;  // Velocidad inicial en píxeles por segundo
+const float INITIAL_SPEED = 100.0f;
 float lastTime = 0.0f;
 
-// QuadTree para la detección de colisiones
+// QuadTree para detección de colisiones O(n log n)
 QuadTree* quadTree = nullptr;
 
-// Función para obtener el tiempo actual en segundos
+// Tiempo actual en segundos
 float getCurrentTime() {
     return glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
 }
 
-// Función para generar un ángulo aleatorio en radianes
+// Ángulo aleatorio en radianes
 float getRandomAngle() {
     static random_device rd;
     static mt19937 gen(rd());
@@ -67,15 +67,14 @@ float getRandomAngle() {
     return dis(gen);
 }
 
-// Función para actualizar el QuadTree
+// Reconstruir QuadTree con posiciones actuales
 void updateQuadTree() {
-    // Crear un nuevo QuadTree con los límites de la ventana
     delete quadTree;
     Point topLeft(BORDER_MARGIN, BORDER_MARGIN);
     Point botRight(windowWidth - BORDER_MARGIN, windowHeight - BORDER_MARGIN);
     quadTree = new QuadTree(topLeft, botRight);
     
-    // Insertar todas las bolas en el QuadTree
+    // Insertar todas las entidades
     for (const Ball& ball : balls) {
         Point pos(static_cast<int>(ball.x), static_cast<int>(ball.y));
         Node* node = new Node(pos, ball.id);
@@ -87,13 +86,13 @@ void updateQuadTree() {
 random_device rd;
 mt19937 gen(rd());
 
-// Función para verificar si una nueva bola colisiona con las existentes
+// Verificar colisión de nueva posición con entidades existentes
 bool checkCollision(float x, float y, const vector<Ball>& balls) {
     if (quadTree == nullptr){
         return false;
     } 
 
-    // Crear un punto para la nueva posición
+    // Query espacial en QuadTree
     Point checkPoint(static_cast<int>(x), static_cast<int>(y));
     
     // Buscar en el QuadTree si hay alguna bola cercana
@@ -114,10 +113,10 @@ bool checkCollision(float x, float y, const vector<Ball>& balls) {
             }
         }
     }
-    return false;  // No hay colisión
+    return false;
 }
 
-// Función para generar bolas aleatoria
+// Generador de bolas aleatorias con verificación de colisiones
 void generateBalls(int n) {
     balls.clear();
     nextBallId = 0;
@@ -144,17 +143,17 @@ void generateBalls(int n) {
         float y = disY(gen);
         
         if (!checkCollision(x, y, balls)) {
-            // Generar velocidad inicial aleatoria
+            // Velocidad inicial aleatoria
             float angle = getRandomAngle();
             float vx = INITIAL_SPEED * cos(angle);
             float vy = INITIAL_SPEED * sin(angle);
 
             
-            // Crear nueva bola con velocidad
+            // Nueva entidad
             Ball newBall(x, y, vx, vy, BALL_RADIUS, nextBallId++);
             balls.push_back(newBall);
             
-            // Insertar en el QuadTree
+            // Insertar en estructura espacial
             Point pos(static_cast<int>(x), static_cast<int>(y));
             Node* node = new Node(pos, newBall.id);
             quadTree->insert(node);
@@ -162,70 +161,69 @@ void generateBalls(int n) {
         attempts++;
     }
     
-    // Inicializar el tiempo
     lastTime = getCurrentTime();
 }
 
-// Función para verificar y manejar colisiones entre bolas usando QuadTree
+// Detección y resolución de colisiones bola-bola via QuadTree
 void handleBallCollisions() {
-    // Primero actualizamos el QuadTree con las posiciones actuales
+    // Actualizar QuadTree con posiciones actuales
     updateQuadTree();
     
-    // Para cada bola, buscamos posibles colisiones en su vecindad
+    // Para cada bola, buscar colisiones en su vecindad
     for (size_t i = 0; i < balls.size(); i++) {
         Ball& ball1 = balls[i];
         
-        // Crear un punto para la posición actual de la bola
+        // Punto de query
         Point checkPoint(static_cast<int>(ball1.x), static_cast<int>(ball1.y));
         
-        // Buscar bolas cercanas en el QuadTree
+        // Query espacial
         Node* nearby = quadTree->search(checkPoint);
         
         if (nearby != nullptr) {
-            // Verificar colisiones con todas las bolas encontradas
+            // Verificar colisiones con entidades en rango
             for (size_t j = i + 1; j < balls.size(); j++) {
                 Ball& ball2 = balls[j];
                 
-                // Calcular la distancia entre las bolas
+                // Distancia entre centros
                 float dx = ball2.x - ball1.x;
                 float dy = ball2.y - ball1.y;
                 float distanceSquared = dx * dx + dy * dy;
                 float minDistance = (ball1.radius + ball2.radius);
                 
-                // Si hay colisión
+                // Colisión detectada
                 if (distanceSquared <= minDistance * minDistance) {
-                    // Calcular la normal de colisión
+                    // Normal de colisión
                     float distance = sqrt(distanceSquared);
                     float nx = dx / distance;
                     float ny = dy / distance;
                     
-                    // Calcular la velocidad relativa
+                    // Velocidad relativa
                     float relativeVx = ball2.vx - ball1.vx;
                     float relativeVy = ball2.vy - ball1.vy;
                     
-                    // Calcular la velocidad relativa a lo largo de la normal
+                    // Velocidad relativa en dirección normal
                     float velocityAlongNormal = relativeVx * nx + relativeVy * ny;
                     
                     
-                    // Si las bolas se están separando, no hacer nada
+                    // Separación: skip si se alejan
                     if (velocityAlongNormal > 0){
                         continue;
                     }
                     
-                    // Coeficiente de restitución (elasticidad de la colisión)
+                    // Coeficiente de restitución
                     const float restitution = 0.8f;
                     
-                    // Calcular el impulso escalar
+                    // Impulso escalar
                     float j = -(1.0f + restitution) * velocityAlongNormal;
-                    j /= 2.0f; // Asumimos que todas las bolas tienen la misma masa
+                    j /= 2.0f; // Masa unitaria
                     
-                    // Aplicar el impulso
+                    // Aplicar impulso
                     ball1.vx -= j * nx;
                     ball1.vy -= j * ny;
                     ball2.vx += j * nx;
                     ball2.vy += j * ny;
                     
-                    // Separar las bolas para evitar que se superpongan
+                    // Corrección de posición para evitar overlap
                     float overlap = minDistance - distance;
                     float moveX = (overlap * nx) / 2.0f;
                     float moveY = (overlap * ny) / 2.0f;
@@ -240,13 +238,14 @@ void handleBallCollisions() {
     }
 }
 
-// Función para actualizar las posiciones de todas las bolas
+// Actualizar física de todas las entidades
 void updateBalls() {
+    // Delta time
     float currentTime = getCurrentTime();
     float deltaTime = currentTime - lastTime;
     lastTime = currentTime;
 
-    // Actualizar posición de cada bola
+    // Integración de movimiento
     for (Ball& ball : balls) {
         ball.update(deltaTime);
         ball.handleBorderCollision(BORDER_MARGIN, BORDER_MARGIN, 
@@ -254,28 +253,27 @@ void updateBalls() {
                                  windowHeight - BORDER_MARGIN);
     }
 
-    // Manejar colisiones entre bolas
+    // Resolver colisiones
     handleBallCollisions();
 
-    // Actualizar el QuadTree
+    // Reconstruir estructura espacial
     updateQuadTree();
     
-    // Solicitar redibujado
     glutPostRedisplay();
 }
 
-// Timer function para la animación
+// Timer: ~60 FPS
 void timer(int value) {
     updateBalls();
-    glutTimerFunc(16, timer, 0);  // Aproximadamente 60 FPS
+    glutTimerFunc(16, timer, 0);
 }
 
-// Función para visualizar el QuadTree (opcional, para debugging)
+// Visualización de la estructura QuadTree (debug)
 void drawQuadTreeGrid(QuadTree* tree, Point topLeft, Point botRight) {
     if (tree == nullptr) return;
     
-    // Dibujar el rectángulo actual del quad
-    glColor3f(0.8f, 0.8f, 0.8f);  // Color gris claro
+    // Rectángulo del quad
+    glColor3f(0.8f, 0.8f, 0.8f);
     glBegin(GL_LINE_LOOP);
     glVertex2i(topLeft.x, topLeft.y);
     glVertex2i(botRight.x, topLeft.y);
@@ -298,9 +296,9 @@ void drawQuadTreeGrid(QuadTree* tree, Point topLeft, Point botRight) {
 }
 
 
-// Modificar la función display para mostrar la velocidad
+// Renderizar bola con vector de velocidad
 void drawBall(const Ball& ball) {
-    // Dibujar la bola
+    // Cuerpo de la bola
     glBegin(GL_TRIANGLE_FAN);
     glVertex2f(ball.x, ball.y);
     for (int i = 0; i <= 360; i += 10) {
@@ -311,15 +309,15 @@ void drawBall(const Ball& ball) {
     }
     glEnd();
 
-    // Dibujar una línea que indica la dirección y velocidad
+    // Vector de velocidad
     glBegin(GL_LINES);
     glVertex2f(ball.x, ball.y);
-    float speedScale = 0.5f;  // Factor de escala para la visualización de la velocidad
+    float speedScale = 0.5f;
     glVertex2f(ball.x + ball.vx * speedScale, ball.y + ball.vy * speedScale);
     glEnd();
 }
 
-// Función para dibujar texto
+// Renderizar texto
 void drawText(const char* text, int x, int y) {
     glRasterPos2i(x, y);
     for (const char* c = text; *c != '\0'; c++) {
@@ -327,7 +325,7 @@ void drawText(const char* text, int x, int y) {
     }
 }
 
-// Función para dibujar un rectángulo
+// Renderizar rectángulo
 void drawRectangle(int x, int y, int width, int height, bool filled) {
     if (filled) {
         glBegin(GL_QUADS);
@@ -345,26 +343,26 @@ void display() {
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     
-    // Dibujar el QuadTree (opcional, para debugging)
+    // Visualizar estructura QuadTree (debug)
     if (quadTree != nullptr) {
         Point topLeft(BORDER_MARGIN, BORDER_MARGIN);
         Point botRight(windowWidth - BORDER_MARGIN, windowHeight - BORDER_MARGIN);
         drawQuadTreeGrid(quadTree, topLeft, botRight);
     }
     
-    // Dibujar el rectángulo grande (marco)
+    // Marco perimetral
     glColor3f(0.0f, 0.0f, 0.0f);
     drawRectangle(BORDER_MARGIN, BORDER_MARGIN, 
                  windowWidth - 2*BORDER_MARGIN, 
                  windowHeight - 2*BORDER_MARGIN, false);
     
-    // Dibujar todas las bolas
+    // Entidades
     glColor3f(0.0f, 0.0f, 1.0f);
     for (const Ball& ball : balls) {
         drawBall(ball);
     }
     
-    // Dibujar la interfaz de entrada
+    // UI de entrada
     glColor3f(0.0f, 0.0f, 0.0f);
     if (inputActive) {
         glColor3f(0.9f, 0.9f, 0.9f);
@@ -378,7 +376,7 @@ void display() {
     glutSwapBuffers();
 }
 
-// Función para manejar el redimensionamiento de la ventana
+// Callback: redimensionamiento de ventana
 void reshape(int w, int h) {
     windowWidth = w;
     windowHeight = h;
@@ -389,7 +387,7 @@ void reshape(int w, int h) {
     glMatrixMode(GL_MODELVIEW);
 }
 
-// Función para manejar entrada de teclado
+// Callback: keyboard input
 void keyboard(unsigned char key, int x, int y) {
     if (key == 13) { // Enter
         inputActive = false;
@@ -406,13 +404,13 @@ void keyboard(unsigned char key, int x, int y) {
     glutPostRedisplay();
 }
 
-// Función para manejar clics del mouse
+// Callback: mouse click
 void mouse(int button, int state, int x, int y) {
     if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-        // Convertir coordenadas del mouse
+        // Transformar coordenadas (GLUT usa origen abajo-izquierda)
         y = windowHeight - y;
         
-        // Verificar si el clic fue en el rectángulo de entrada
+        // Verificar clic en área de input
         if (x >= 200 && x <= 300 && y >= windowHeight - 80 && y <= windowHeight - 50) {
             inputActive = true;
         } else {
@@ -437,7 +435,7 @@ int main(int argc, char** argv) {
     glutReshapeFunc(reshape);
     glutKeyboardFunc(keyboard);
     glutMouseFunc(mouse);
-    glutTimerFunc(0, timer, 0);  // Iniciar el timer
+    glutTimerFunc(0, timer, 0);
     
     atexit(cleanup);
     

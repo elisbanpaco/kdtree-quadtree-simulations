@@ -1,11 +1,20 @@
 #ifndef QUAD_H
 #define QUAD_H
-// ************ Quad Tree *************************
-//************************************************ */
+/**
+ * @file QUAD.h
+ * @brief Implementación de QuadTree para indexación espacial 2D
+ *
+ * Estructura de datos que particiona el espacio 2D en cuatro regiones cuadrantes,
+ * permitiendo búsqueda y inserción en O(log n) promedio para distribuciones uniforme.
+ */
 #include <cmath>
 #include <iostream>
 using namespace std;
 
+/**
+ * @struct Point
+ * @brief Punto 2D con coordenadas enteras
+ */
 struct Point {
 	int x;
 	int y;
@@ -21,6 +30,10 @@ struct Point {
 	}
 };
 
+/**
+ * @struct Node
+ * @brief Nodo conteniendo posición e identificador de entidad
+ */
 struct Node {
 	Point pos;
 	int data;
@@ -32,19 +45,33 @@ struct Node {
 	Node() { data = 0; }
 };
 
+/**
+ * @class QuadTree
+ * @brief QuadTree para indexación espacial 2D
+ *
+ * Particiona recursivamente el espacio en cuatro cuadrantes.
+ * Inserción: O(log n) promedio | Búsqueda: O(log n) promedio
+ */
 class QuadTree {
 
 public:
-	// Hold details of the boundary of this node
+	/// Boundary del nodo (esquina superior izquierda)
 	Point topLeft;
+	/// Boundary del nodo (esquina inferior derecha)
 	Point botRight;
 
+	/// Puntero al nodo contenido (hoja)
 	Node* n;
 
+	/// Subárboles: cuadrantes NW, NE, SW, SE
 	QuadTree* topLeftTree;
 	QuadTree* topRightTree;
 	QuadTree* botLeftTree;
 	QuadTree* botRightTree;
+	
+	/**
+	 * @brief Constructor por defecto
+	 */
 	QuadTree()
 	{
 		topLeft = Point(0, 0);
@@ -55,6 +82,12 @@ public:
 		botLeftTree = NULL;
 		botRightTree = NULL;
 	}
+	
+	/**
+	 * @brief Constructor con boundary
+	 * @param topL Esquina superior izquierda
+	 * @param botR Esquina inferior derecha
+	 */
 	QuadTree(Point topL, Point botR)
 	{
 		n = NULL;
@@ -65,12 +98,37 @@ public:
 		topLeft = topL;
 		botRight = botR;
 	}
+	
+	/**
+	 * @brief Inserta un nodo en el QuadTree
+	 * @param node Puntero al nodo a insertar
+	 * @note Complejidad: O(log n) promedio
+	 */
 	void insert(Node*);
+	
+	/**
+	 * @brief Busca un punto en el QuadTree
+	 * @param p Punto a buscar
+	 * @return Puntero al nodo encontrado, o nullptr si no existe
+	 * @note Complejidad: O(log n) promedio
+	 */
 	Node* search(Point);
+	
+	/**
+	 * @brief Verifica si un punto está dentro del boundary
+	 * @param p Punto a verificar
+	 * @return true si está dentro, false en caso contrario
+	 */
 	bool inBoundary(Point);
 };
 
-// Insert a node into the quadtree
+/**
+ * @brief Inserta un nodo en el QuadTree
+ * @details Si el nodo actual es hoja (sin datos), almacena el nodo.
+ *          De lo contrario, determina el cuadrante y lo inserta recursivamente.
+ * @param node Puntero al nodo a insertar
+ * @pre El nodo debe estar dentro del boundary actual
+ */
 void QuadTree::insert(Node* node)
 {
 	if (node == NULL)
@@ -127,7 +185,12 @@ void QuadTree::insert(Node* node)
 	}
 }
 
-// Find a node in a quadtree
+/**
+ * @brief Busca un punto en el QuadTree
+ * @details Realiza una búsqueda descendente por el cuadrante correspondiente
+ * @param p Punto a buscar
+ * @return Nodo encontrado o nullptr
+ */
 Node* QuadTree::search(Point p)
 {
 	if (!inBoundary(p))
@@ -162,6 +225,11 @@ Node* QuadTree::search(Point p)
 	}
 };
 
+/**
+ * @brief Verifica si un punto está dentro del boundary
+ * @param p Punto a verificar
+ * @return true si el punto está dentro del rectángulo definido por topLeft y botRight
+ */
 bool QuadTree::inBoundary(Point p)
 {
 	return (p.x >= topLeft.x && p.x <= botRight.x
